@@ -1,6 +1,5 @@
 %% Development Information
 % MAE 484 Spacecraft Propulsion - Midterm Project
-% MAE484_PROJECT_GROUP10.m
 % 
 % Calculate various items throughout the project tasks.
 % 
@@ -207,7 +206,9 @@ rt = dt/2; % m, throat radius
 rtd = 0.382*rt; % m, throat outlet radius
 Ln_r = (rt*(sqrt(E)-1) + rtd*(secd(alp)-1)) / (tand(alp));
 
-% Part c - Drawing
+% Part c
+
+Nozzle = CreateNozzle_G10(alp,Ln,lambda,rt,rtd,Ln_r); % returns a struct
 
 % Part d
 thi = 47;
