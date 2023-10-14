@@ -53,8 +53,9 @@ g0 = 9.8066; % m/s^2
 % -------------------------------Task 2------------------------------------
 % Gross Vehicle Sizing
 
-Isp_actual = n_cF * n_cstar * Isp_ideal; % s, actual specific impulse
+Isp_actual = n_v * Isp_ideal; % s, actual specific impulse
 c_ideal = Isp_actual * g0; % m/s, effective exhaust velocity
+c = Isp * g0; % m/s, effective exhaust velocity
 
 m_f = m_inert + m_pay; % kg, final mass
 m_prop = m_f * (exp(dv/c_ideal) - 1); % kg, propellant mass
