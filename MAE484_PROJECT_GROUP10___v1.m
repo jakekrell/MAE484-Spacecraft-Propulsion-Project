@@ -105,6 +105,8 @@ cF = c/cstar; % thrust coefficient (actual)
 
 % Part (d):
 
+mdot = F_ideal / c; % kg/s, mass flow rate (actual)
+
 At = cstar*mdot/Pc; % m^2, throat area
 Ae = E*At; % m^2, exit area
 
@@ -113,7 +115,6 @@ de = 2*sqrt(Ae/pi); % m, exit diameter
 
 % Returning to P_actual calculations with known At:
 
-c_ideal = n_cstar*n_cF*c;
 mdot_ideal = F_ideal/c_ideal;
 Pc_ideal = cstar_ideal*mdot_ideal/At; % NOTE Pc_ideal=Pc MIGHT BE TRUE BY DEFINITION !!!!!!!!!!!!!!!!
 
