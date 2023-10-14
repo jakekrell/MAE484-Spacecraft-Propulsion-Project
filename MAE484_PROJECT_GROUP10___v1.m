@@ -53,8 +53,8 @@ g0 = 9.8066; % m/s^2
 % -------------------------------Task 2------------------------------------
 % Gross Vehicle Sizing
 
-Isp_actual = n_v * Isp_ideal; % s, actual specific impulse
-c_ideal = Isp_actual * g0; % m/s, effective exhaust velocity
+Isp = n_v * Isp_ideal; % s, actual specific impulse
+c_ideal = Isp * g0; % m/s, effective exhaust velocity
 c = Isp * g0; % m/s, effective exhaust velocity
 
 m_f = m_inert + m_pay; % kg, final mass
@@ -64,7 +64,7 @@ m_t = m_pay + m_prop + m_inert; % kg, total mass
 r_pay = m_pay / m_t; % unitless, payload mass ratio
 zeta_inert = m_inert / (m_inert + m_prop); % unitless, Inert mass fraction
 
-I_t = Isp_actual * m_prop * g0; % N * s, Total Impulse
+I_t = Isp * m_prop * g0; % N * s, Total Impulse
 m_dot_ideal = F_ideal / c_ideal; % kg / s, mass flow rate ideal
 t_burn = I_t / F_ideal; % s, burn duration
 
