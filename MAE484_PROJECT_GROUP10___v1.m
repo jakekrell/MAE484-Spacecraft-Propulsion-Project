@@ -57,7 +57,7 @@ Isp_actual = n_cF * n_cstar * Isp_ideal; % s, actual specific impulse
 c_ideal = Isp_actual * g0; % m/s, effective exhaust velocity
 
 m_f = m_inert + m_pay; % kg, final mass
-m_prop = m_f * (exp(dV/c_ideal) - 1); % kg, propellant mass
+m_prop = m_f * (exp(dv/c_ideal) - 1); % kg, propellant mass
 m_i = m_f + m_prop; % kg, initial mass
 m_t = m_pay + m_prop + m_inert; % kg, total mass
 r_pay = m_pay / m_t; % unitless, payload mass ratio
