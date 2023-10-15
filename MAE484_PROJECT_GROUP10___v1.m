@@ -212,8 +212,13 @@ Ln_r = (rt*(sqrt(E)-1) + rtd*(secd(alp)-1)) / (tand(alp));
 
 % Part c
 
-plt = {1,1,1,1,'k-',2,'b--',1,'k-.',0.5,'r-.',0.5,0.05}; % plot controls
-Nozzle = CreateNozzle2D_G10(rc,Lc,1.5*rt,rt,rtd,alp,Ln_r,1e2,plt,1);
+% plt == plot controls = . . .
+% . . . [plt_global,plt_sect,plt_mid,plt_radii,plt_nTyp,plt_nPnt,plt_sTyp,
+% . . . plt_sPnt,plt_mTyp,plt_mPnt,plt_rTyp,plt_rPnt,plt_buffer]
+% plt = {1,1,1,1,'k-',2,'b--',1,'k-.',0.5,'r-.',0.5,0.05}; % v1
+plt = {1,1,1,0,'k-',4,'k-.',0.5,'k-.',0.5,'r-.',0.5,0.05}; % v2
+% Nozzle = CreateNozzleConical2D_G10(rc,Lc,1.5*rt,rt,rtd,alp,Ln_r,1e2,plt,0);
+Nozzle = CreateNozzleConical2D_StraightConvergent_G10(rc,Lc,1.5*rt,135,rt,rtd,alp,Ln_r,1e2,plt,0);
 
 % Part d
 thi = 47;
