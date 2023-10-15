@@ -41,7 +41,7 @@ function Nozzle = CreateNozzle2D_G10(rc,Lc,rt1,ttu,rt,rt2,a,L,exit,res,plt,xc_of
     end
 
     if ttu <= 90 || ttu >= 180
-        error('Input[ttu] must exist between (90, 180) degrees.')
+        error('Input[ttu] must exist between (90, 180) degrees, measured CCW from +x axis.')
     end
 
     if ~iscell(exit)
@@ -106,6 +106,8 @@ function Nozzle = CreateNozzle2D_G10(rc,Lc,rt1,ttu,rt,rt2,a,L,exit,res,plt,xc_of
         bE = Ey - mE*Ex; % numeric
         Q = [(bE-bN)/(mN-mE), (mN*bE-mE*bN)/(mN-mE)]'; % numeric
 
+        NQE = [N';Q';E'];
+
         t = linspace(0,1,res);
         RHS = Q + (1-t).^2.*(N-Q) + t.^2.*(E-Q); % quadratic Bézier curve
         
@@ -113,6 +115,15 @@ function Nozzle = CreateNozzle2D_G10(rc,Lc,rt1,ttu,rt,rt2,a,L,exit,res,plt,xc_of
         yL = RHS(2,:);
 
         x2_end = Nx;
+
+        % check ti and tf
+%         ti = atan(dNQ)
+        ti_check = atand((Q(2)-N(2))/(Q(1)-N(1)));
+%         tf = atan(dQE)
+        tf_check = atand((E(2)-Q(2))/(E(1)-Q(1)));
+        if abs(ti_check-ti)>1e-3 || abs(tf_check-tf)>1e-3
+            error('ti and/or tf failed to hold for Bezier curve.')
+        end
     else
         error('Ipnut[exit] must be a cell and is limited to Conical or Contour.')
     end
@@ -200,19 +211,28 @@ function Nozzle = CreateNozzle2D_G10(rc,Lc,rt1,ttu,rt,rt2,a,L,exit,res,plt,xc_of
         yNQE = [Ny;Q(2);Ey];
         Nozzle.Expansion.yNQE = [-yNQE,yNQE];
         plt{14} = 1;
-    else
+
+        Nozzle.Characteristics.ttd = ti-90;
+        Nozzle.Characteristics.tcc = (ttu-270)+180;
+        Nozzle.Characteristics.ti = ti;
+        Nozzle.Characteristics.tf = tf;
+        Nozzle.Characteristics.re = re;
+    else % conical
         plt{14} = 0;
+
+        Nozzle.Characteristics.alpha = a*180/pi; % degrees
+        Nozzle.Characteristics.re = L*tan(a);
     end
 
     Nozzle.Characteristics.Lc = Lc;
     Nozzle.Characteristics.L = L;
-    Nozzle.Characteristics.alpha = a;
-    Nozzle.Characteristics.ttu = ttu;
+    Nozzle.Characteristics.ttu = ttu-270; % degrees
     Nozzle.Characteristics.rc = rc;
-    Nozzle.Characteristics.rt1 = rt1;
+    Nozzle.Characteristics.rcc = rt1; % assumption of this function
+    Nozzle.Characteristics.rtu = rt1;
     Nozzle.Characteristics.rt = rt;
-    Nozzle.Characteristics.rt2 = rt2;
-   
+    Nozzle.Characteristics.rtd = rt2;
+
 
     % plotting:
 
@@ -225,25 +245,27 @@ end
 
 function PlotNozzle2D_G10(Nozzle,plt)
     
-    rc = Nozzle.Characteristics.rc;
-    rt1 = Nozzle.Characteristics.rt1;
-    rt = Nozzle.Characteristics.rt;
-    rt2 = Nozzle.Characteristics.rt2;
+    m = 1e3; % m to mm
+
+    rc = m*Nozzle.Characteristics.rc;
+    rt1 = m*Nozzle.Characteristics.rtu;
+    rt = m*Nozzle.Characteristics.rt;
+    rt2 = m*Nozzle.Characteristics.rtd;
     
-    x_all = Nozzle.x;
-    y_all = Nozzle.y(:,2);
-    xc = Nozzle.Chamber.x;
-    yc = Nozzle.Chamber.y(:,2);
-    x0 = Nozzle.Contraction.x;
-    y0 = Nozzle.Contraction.y(:,2);
-    xcc = Nozzle.Contraction.xStraight;
-    ycc = Nozzle.Contraction.yStraight(:,2);
-    x1 = Nozzle.Throat.Upstream.x;
-    y1 = Nozzle.Throat.Upstream.y(:,2);
-    x2 = Nozzle.Throat.Downstream.x;
-    y2 = Nozzle.Throat.Downstream.y(:,2);
-    xL = Nozzle.Expansion.x;
-    yL = Nozzle.Expansion.y(:,2);
+    x_all = m*Nozzle.x;
+    y_all = m*Nozzle.y(:,2);
+    xc = m*Nozzle.Chamber.x;
+    yc = m*Nozzle.Chamber.y(:,2);
+    x0 = m*Nozzle.Contraction.x;
+    y0 = m*Nozzle.Contraction.y(:,2);
+    xcc = m*Nozzle.Contraction.xStraight;
+    ycc = m*Nozzle.Contraction.yStraight(:,2);
+    x1 = m*Nozzle.Throat.Upstream.x;
+    y1 = m*Nozzle.Throat.Upstream.y(:,2);
+    x2 = m*Nozzle.Throat.Downstream.x;
+    y2 = m*Nozzle.Throat.Downstream.y(:,2);
+    xL = m*Nozzle.Expansion.x;
+    yL = m*Nozzle.Expansion.y(:,2);
     
     plt_global = plt{1};
     plt_sect = plt{2};
@@ -259,10 +281,12 @@ function PlotNozzle2D_G10(Nozzle,plt)
     plt_rPnt = plt{12};
     plt_buffer = plt{13}; % percentage of 1 side's negative space vs image
     plt_contour = plt{14};
+    plt_font = plt{15};
+    plt_legend = plt{16};
 
     if plt_contour
-        xNQE = Nozzle.Expansion.xNQE(:,1);
-        yNQE = Nozzle.Expansion.yNQE(:,2);
+        xNQE = m*Nozzle.Expansion.xNQE(:,1);
+        yNQE = m*Nozzle.Expansion.yNQE(:,2);
     end
 
     if plt_global
@@ -313,11 +337,61 @@ function PlotNozzle2D_G10(Nozzle,plt)
             ylim([-maxY, maxY])
         end
 
-        title('Conical Rocket Nozzle Design','Interpreter','latex')
-        xlabel('Location Along Nozzle Length (m)','Interpreter','latex')
-        ylabel('Location Along Nozzle Height (m)','Interpreter','latex')
+        if plt_contour
+            title('Contour Rocket Nozzle Design','Interpreter','latex')
+            if plt_legend
+                xoff = 0;
+                xoff2 = xc(end)/1 - xc(1);
+                yoff = max(y_all)/8;
+                
+                xtxt = x_all(1) + xoff;
+                xtxt2 = x_all(1) + xoff2;
+                ytxt = max(y_all);
+                
+                text(xtxt,ytxt-0*yoff,append('$\theta_{tu}=',num2str(Nozzle.Characteristics.ttu),'^{\circ}$'),'Interpreter','latex')
+                text(xtxt,ytxt-1*yoff,append('$\theta_{td}=',num2str(Nozzle.Characteristics.ttd),'^{\circ}$'),'Interpreter','latex')
+                text(xtxt,ytxt-2*yoff,append('$\theta_{cc}=',num2str(Nozzle.Characteristics.tcc),'^{\circ}$'),'Interpreter','latex')
+                text(xtxt,ytxt-3*yoff,append('$\theta_i=',num2str(Nozzle.Characteristics.ti),'^{\circ}$'),'Interpreter','latex')
+                text(xtxt,ytxt-4*yoff,append('$\theta_f=',num2str(Nozzle.Characteristics.tf),'^{\circ}$'),'Interpreter','latex')
+
+                text(xtxt2,ytxt-0*yoff,append('$L_c=',num2str(1e3*Nozzle.Characteristics.Lc),'mm$'),'Interpreter','latex')
+                text(xtxt2,ytxt-1*yoff,append('$L_n=',num2str(1e3*Nozzle.Characteristics.L),'mm$'),'Interpreter','latex')
+
+                text(xtxt,-ytxt+0*yoff,append('$r_e=',num2str(1e3*Nozzle.Characteristics.re),'mm$'),'Interpreter','latex')
+                text(xtxt,-ytxt+1*yoff,append('$r_t=',num2str(1e3*Nozzle.Characteristics.rt),'mm$'),'Interpreter','latex')
+                text(xtxt,-ytxt+2*yoff,append('$r_{td}=',num2str(1e3*Nozzle.Characteristics.rtd),'mm$'),'Interpreter','latex')
+                text(xtxt,-ytxt+3*yoff,append('$r_{tu}=',num2str(1e3*Nozzle.Characteristics.rtu),'mm$'),'Interpreter','latex')
+                text(xtxt,-ytxt+4*yoff,append('$r_{cc}=',num2str(1e3*Nozzle.Characteristics.rcc),'mm$'),'Interpreter','latex')
+                text(xtxt,-ytxt+5*yoff,append('$r_c=',num2str(1e3*Nozzle.Characteristics.rc),'mm$'),'Interpreter','latex')
+            end
+        else
+            title('Conical Rocket Nozzle Design','Interpreter','latex')
+            if plt_legend
+                xoff = 0;
+                yoff = max(y_all)/8;
+                
+                xtxt = x_all(1) + xoff;
+                ytxt = max(y_all);
+                
+                text(xtxt,ytxt-0*yoff,append('$\theta_{tu}=',num2str(Nozzle.Characteristics.ttu),'^{\circ}$'),'Interpreter','latex')
+                text(xtxt,ytxt-1*yoff,append('$\alpha=',num2str(Nozzle.Characteristics.alpha),'^{\circ}$'),'Interpreter','latex')
+                
+                text(xtxt,ytxt-2*yoff,append('$L_c=',num2str(1e3*Nozzle.Characteristics.Lc),'mm$'),'Interpreter','latex')
+                text(xtxt,ytxt-3*yoff,append('$L_n=',num2str(1e3*Nozzle.Characteristics.L),'mm$'),'Interpreter','latex')
+
+                text(xtxt,-ytxt+0*yoff,append('$r_e=',num2str(1e3*Nozzle.Characteristics.re),'mm$'),'Interpreter','latex')
+                text(xtxt,-ytxt+1*yoff,append('$r_t=',num2str(1e3*Nozzle.Characteristics.rt),'mm$'),'Interpreter','latex')
+                text(xtxt,-ytxt+2*yoff,append('$r_{td}=',num2str(1e3*Nozzle.Characteristics.rtd),'mm$'),'Interpreter','latex')
+                text(xtxt,-ytxt+3*yoff,append('$r_{tu}=',num2str(1e3*Nozzle.Characteristics.rtu),'mm$'),'Interpreter','latex')
+                text(xtxt,-ytxt+4*yoff,append('$r_{cc}=',num2str(1e3*Nozzle.Characteristics.rcc),'mm$'),'Interpreter','latex')
+                text(xtxt,-ytxt+5*yoff,append('$r_c=',num2str(1e3*Nozzle.Characteristics.rc),'mm$'),'Interpreter','latex')
+            end
+        end
+        xlabel('Location Along Nozzle Length $(mm)$','Interpreter','latex')
+        ylabel('Location Along Nozzle Width $(mm)$','Interpreter','latex')
         hold off
         set(gca,'TickLabelInterpreter','latex')
+        fontsize(gcf,scale=plt_font)
 
     end
 end
