@@ -221,5 +221,31 @@ plt = {1,1,1,0,'k-',4,'k-.',0.5,'k-.',0.5,'r-.',0.5,0.05}; % v2
 Nozzle = CreateNozzleConical2D_StraightConvergent_G10(rc,Lc,1.5*rt,135,rt,rtd,alp,Ln_r,1e2,plt,0);
 
 % Part d
-thi = 47;
+thi = 43;
 thf = 10;
+
+% -------------------------------Task 7------------------------------------
+% Thrust Optimal Parabolic (TOP) Nozzle Design
+
+rtu = 1.5*rt;
+thtu = -150;
+rtd = 0.382*rt;
+
+xtd = rtd*rt*cosd(thi-90);
+ytd = rtd*rt*sind(thi-90) + rtd*rt + rt;
+
+re = de/2;
+
+N = [xtd;ytd];
+E_ = [Ln*0.7;re];
+
+mn = tand(thi);
+bn = N(2) - mn*N(1);
+
+me = tand(thf);
+be = E_(2) - me*E_(1);
+
+Q = [((be-bn)/(mn-me));
+     ((mn*be - me*bn)/(mn*me))];
+rcc = 1.5*rt;
+
