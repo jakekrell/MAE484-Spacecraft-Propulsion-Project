@@ -34,9 +34,9 @@ clearvars, clc, close all
 
 % plt == plot controls = . . .
 % . . . [plt_global,plt_sect,plt_mid,plt_radii,plt_nTyp,plt_nPnt,plt_sTyp,
-% . . . plt_sPnt,plt_mTyp,plt_mPnt,plt_rTyp,plt_rPnt,plt_buffer]
-% plt = {1,1,1,1,'k-',2,'b--',1,'k-.',0.5,'r-.',0.5,0.05}; % v1
-plt = {1,1,1,0,'k-',4,'k-.',0.5,'k-.',0.5,'r-.',0.5,0.05}; % v2
+% . . . plt_sPnt,plt_mTyp,plt_mPnt,plt_rTyp,plt_rPnt,plt_buffer,plt_font]
+% plt = {1,1,1,1,'k-',2,'b--',1,'k-.',0.5,'r-.',0.5,0.05,1,1.5}; % v1
+plt = {1,1,1,0,'k-',4,'k-.',0.5,'k-.',0.5,'r-.',0.5,0.05,1,1.5,1}; % v3
 
 % --------------------Initialization of Given Data-------------------------
 
@@ -235,7 +235,7 @@ thf = 10;
 
 rtu = 1.5*rt;
 % thtu = -150;
-thtu = -135;
+thtu = -160;
 rtd = 0.382*rt;
 
 xtu = rtu*rt*cosd(-90);
@@ -282,4 +282,5 @@ xcc = x_p_cc - L_converge;
 
 % PLOTTING CONTOUR BELL
 exit = {'Contour', re, thi, thf};
-Nozzle = CreateNozzle2D_G10(rc,Lc,rcc,-thtu,rt,rtd,alp,E_(1),exit,1e2,plt,0);
+thtu_funcDefn = 270+thtu;
+Nozzle = CreateNozzle2D_G10(rc,Lc,rcc,thtu_funcDefn,rt,rtd,alp,E_(1),exit,1e2,plt,0);
