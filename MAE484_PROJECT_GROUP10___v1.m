@@ -227,13 +227,24 @@ thf = 10;
 % -------------------------------Task 7------------------------------------
 % Thrust Optimal Parabolic (TOP) Nozzle Design
 
+% 1) Chamber convergent to throat upstream circular arc
+
 rtu = 1.5*rt;
 thtu = -150;
 rtd = 0.382*rt;
 
-xtd = rtd*rt*cosd(thi-90);
-ytd = rtd*rt*sind(thi-90) + rtd*rt + rt;
+xtu = rtu*rt*cosd(-90);
+ytu = rtu*rt*sind(-90) + rtu*rt + rt;
 
+xtu_thtu = 0.07621024;
+ytu_thtu = 0.102700;
+
+% 2) Throat downstream to nozzle circular arc
+xtd = 0.01527676;
+ytd = 0.06471768;
+thtd = thi - 90;
+
+% 3) Nozzle bell section
 re = de/2;
 
 N = [xtd;ytd];
@@ -246,6 +257,20 @@ me = tand(thf);
 be = E_(2) - me*E_(1);
 
 Q = [((be-bn)/(mn-me));
-     ((mn*be - me*bn)/(mn*me))];
+     ((mn*be - me*bn)/(mn-me))];
+
+% 4) Chamber convergent section circular arc
 rcc = 1.5*rt;
+x_p_cc = rcc*rc*cosd(180+thtu);
+ycc = rcc*rc*sind(180+thtu) + rcc*rc + rc;
+ycc_90 = rcc*rc*sind(90) + rcc*rc + rc;
+Lcc = x_p_cc - rcc*rc*cosd(90);
+
+% 5) Convergent section straight line
+
+mtu = tand(90+thtu);
+btu = ytu_thtu - mtu*xtu_thtu;
+L_linetu = (ycc - btu)/mtu;
+L_converge = abs(L_linetu) + abs(Lcc);
+xcc = x_p_cc - L_converge;
 
