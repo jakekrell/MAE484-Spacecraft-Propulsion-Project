@@ -20,7 +20,7 @@
 % Sept. 29, 2023    VDF, JPK         Setting up givens and tasks 2-4.
 % Sept. 30, 2023    VDF, JPK         Completion of tasks 2-3.
 %
-%% Initialization of Given Data
+%% 
 
 func = '\func';
 folder = pwd;
@@ -29,6 +29,16 @@ if folder(end-4:end) ~= func
 end
 
 clearvars, clc, close all
+
+% ----------------------------Plot Controls--------------------------------
+
+% plt == plot controls = . . .
+% . . . [plt_global,plt_sect,plt_mid,plt_radii,plt_nTyp,plt_nPnt,plt_sTyp,
+% . . . plt_sPnt,plt_mTyp,plt_mPnt,plt_rTyp,plt_rPnt,plt_buffer]
+% plt = {1,1,1,1,'k-',2,'b--',1,'k-.',0.5,'r-.',0.5,0.05}; % v1
+plt = {1,1,1,0,'k-',4,'k-.',0.5,'k-.',0.5,'r-.',0.5,0.05}; % v2
+
+% --------------------Initialization of Given Data-------------------------
 
 % Nozzle and Propellant (NTO/A50) Characteristics:
 Pc = 8.15 * 101325; % Pa, chamber pressure (actual)
@@ -212,16 +222,10 @@ Ln_r = (rt*(sqrt(E)-1) + rtd*(secd(alp)-1)) / (tand(alp));
 
 % Part c
 
-% plt == plot controls = . . .
-% . . . [plt_global,plt_sect,plt_mid,plt_radii,plt_nTyp,plt_nPnt,plt_sTyp,
-% . . . plt_sPnt,plt_mTyp,plt_mPnt,plt_rTyp,plt_rPnt,plt_buffer]
-% plt = {1,1,1,1,'k-',2,'b--',1,'k-.',0.5,'r-.',0.5,0.05}; % v1
-plt = {1,1,1,0,'k-',4,'k-.',0.5,'k-.',0.5,'r-.',0.5,0.05}; % v2
-% Nozzle = CreateNozzleConical2D_G10(rc,Lc,1.5*rt,rt,rtd,alp,Ln_r,1e2,plt,0);
-Nozzle = CreateNozzleConical2D_StraightConvergent_G10(rc,Lc,1.5*rt,135,rt,rtd,alp,Ln_r,1e2,plt,0);
+Nozzle = CreateNozzle2D_G10(rc,Lc,1.5*rt,135,rt,rtd,alp,Ln_r,'Conical',1e2,plt,0);
 
 % Part d
-thi = 43;
+thi = 47;
 thf = 10;
 
 % -------------------------------Task 7------------------------------------
@@ -230,7 +234,8 @@ thf = 10;
 % 1) Chamber convergent to throat upstream circular arc
 
 rtu = 1.5*rt;
-thtu = -150;
+% thtu = -150;
+thtu = -135;
 rtd = 0.382*rt;
 
 xtu = rtu*rt*cosd(-90);
@@ -274,3 +279,7 @@ L_linetu = (ycc - btu)/mtu;
 L_converge = abs(L_linetu) + abs(Lcc);
 xcc = x_p_cc - L_converge;
 
+
+% PLOTTING CONTOUR BELL
+exit = {'Contour', re, thi, thf};
+Nozzle = CreateNozzle2D_G10(rc,Lc,rcc,-thtu,rt,rtd,alp,E_(1),exit,1e2,plt,0);
