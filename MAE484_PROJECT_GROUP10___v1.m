@@ -22,7 +22,11 @@
 %
 %% Initialization of Given Data
 
-addpath(append(pwd,'\func')) % add folder with functions to path
+func = '\func';
+folder = pwd;
+if folder(end-4:end) ~= func
+    addpath(append(pwd,func)) % add folder with functions to path
+end
 
 clearvars, clc, close all
 
@@ -182,7 +186,7 @@ Ec = (1/Mc)*sqrt( ((2/gp1)*(1 + (gm1/2)*Mc^2))^(gp1/gm1) );
 % Part (b)
 
 dc = sqrt(4*Ec*At/pi); % m, Chamber Diameter
-rc = dc*2; % m, Chamber Radius
+rc = dc/2; % m, Chamber Radius
 Ac = (pi*dc^2)/4; % m^2, Chamber Area
  
 % Part ©
@@ -199,7 +203,7 @@ alp = 15; % deg, half angle for a conical nozzle
 
 % Part a
 Ln = (de - dt)/(2*tand(alp)); % m, Nozzle Length
-lambda = ((1+cosd(alp))/2); % percent, agnle correction factor
+lambda = ((1+cosd(alp))/2); % percent, angle correction factor
 
 % Part b
 rt = dt/2; % m, throat radius 
@@ -208,7 +212,8 @@ Ln_r = (rt*(sqrt(E)-1) + rtd*(secd(alp)-1)) / (tand(alp));
 
 % Part c
 
-Nozzle = CreateNozzle_G10(alp,Ln,lambda,rt,rtd,Ln_r); % returns a struct
+plt = {1,1,1,1,'k-',2,'b--',1,'k-.',0.5,'r-.',0.5,0.05}; % plot controls
+Nozzle = CreateNozzle2D_G10(rc,Lc,1.5*rt,rt,rtd,alp,Ln_r,1e2,plt,1);
 
 % Part d
 thi = 47;
