@@ -12,6 +12,7 @@
 % (1) 1.5*rt   == chamber to conv. section, and conv. to throat inlet
 % (2) 0.382*rt == throat outlet to exit section
 % (3) origin at center of throat
+% (4) no straight line in convergent section
 % 
 % 
 % Primary Developer Contact Information:
@@ -31,7 +32,7 @@
 %
 %%
 
-function Nozzle = CreateNozzle2D_G10(rc,Lc,rt1,rt,rt2,a,L,res,plt,xc_offset)
+function Nozzle = CreateNozzle2D_G10(rc,Lc,rt1,ttu,rt,rt2,a,L,exit,res,plt,xc_offset)
 
     if (rc-rt) > 2*rt1 % chamber to throat cannot be connected smoothly
         error('Cannot connect geometry. Increase rt and/or rt1, and/or decrease rc.')
@@ -39,10 +40,18 @@ function Nozzle = CreateNozzle2D_G10(rc,Lc,rt1,rt,rt2,a,L,res,plt,xc_offset)
         error('Chamber radius must be greater than throat radius.')
     end
 
+    if ttu <= 90 || ttu >= 180
+        error('Input[ttu] must exist between (90, 180) degrees.')
+    end
+
+    if ~iscell(exit)
+        exit = {exit};
+    end
+
     a = a*pi/180; % convert alpha to radians
     x = linspace(0,1,res); % x-grid spacing per curve
 
-    % find where throat ends
+    % find where throat ends for conical
     
 %     % equations:
 %     y2 = rt + rt2 - sqrt(rt2^2 - x2^2);
@@ -54,46 +63,80 @@ function Nozzle = CreateNozzle2D_G10(rc,Lc,rt1,rt,rt2,a,L,res,plt,xc_offset)
 %
 %     % solving for x2_end:
 %     dy2 = dyL --> x2_end/sqrt(rt2^2-x2_end^2) = tan(a);
-    x2_end = rt2 * tan(a) / sqrt(1 + tan(a)^2);
+
+    if exit{1} == 'Conical'
+        x2_end = rt2 * tan(a) / sqrt(1 + tan(a)^2);
+        y2_end = rt + rt2 - sqrt(rt2^2 - x2_end^2);
+        
+        xL = [x2_end, L];
+        yL = [y2_end, tan(a)*(L-x2_end)+y2_end];
+    elseif exit{1} == 'Contour'
+        re = exit{2};
+        ti = exit{3}; % degrees
+        tf = exit{4}; % degrees
+
+        syms Nx Ny % Nx == x2_end
+
+        y2_fx = Ny == rt + rt2 - sqrt(rt2^2 - Nx^2); % == y2_end
+       
+        Ex = L;
+        Ey = re;
     
+        mN = tand(ti);
+        bN = Ny - mN*Nx; % symbolic
+        mE = tand(tf);
+        bE = Ey - mE*Ex; % symbolic
+    
+        Q = [(bE-bN)/(mN-mE), (mN*bE-mE*bN)/(mN-mE)]'; % symbolic
+
+%         dNQ = dy2
+        derivsEqual = (Q(2)-Ny)/(Q(1)-Nx) == Nx/sqrt(rt2^2-Nx^2); % =f(Nx)
+
+        ig_Nx = rt2/2;
+        ig_Ny = rt + rt2 - sqrt(rt2^2 - ig_Nx^2);
+        sol = vpasolve([y2_fx,derivsEqual],[Nx,Ny],[ig_Nx;ig_Ny]);
+
+        Nx = double(sol.Nx);
+        Ny = double(sol.Ny);
+
+        N = [Nx;Ny];
+        E = [Ex;Ey];
+
+        bN = Ny - mN*Nx; % numeric
+        bE = Ey - mE*Ex; % numeric
+        Q = [(bE-bN)/(mN-mE), (mN*bE-mE*bN)/(mN-mE)]'; % numeric
+
+        t = linspace(0,1,res);
+        RHS = Q + (1-t).^2.*(N-Q) + t.^2.*(E-Q); % quadratic Bézier curve
+        
+        xL = RHS(1,:);
+        yL = RHS(2,:);
+
+        x2_end = Nx;
+    else
+        error('Ipnut[exit] must be a cell and is limited to Conical or Contour.')
+    end
+
     x2 = x*x2_end;
     y2 = rt + rt2 - sqrt(rt2^2 - x2.^2);
-
-    xL = [x2_end, L];
-    yL = [y2(end), tan(a)*(L-x2_end)+y2(end)];
 
 
     % find where throat starts:
 
-%     % equations:
-%     y1 = rt + rt1 - sqrt(rt1^2 - x1^2);
-%     y0 = sqrt(rc^2 - (x0-xc_end)^2);
-% 
-%     % need derivatives equal at (x1_end,y1_end):
-%     dy1 = -1/2 * (rt1^2 - x1^2)^(-1/2) * (-2*x1);
-%     dy0 = 1/2 * (rc^2 - (x0-xc_end)^2))^(-1/2) * (-2*(x0-xc_end));
-%
-%     % solving for xc_end given dy1 = dy0 at x1_end = x0_end:
-%     dy1 = dy0 -->
-%     -x1/sqrt(rt1^2-x1^2) = (x0-xc_end)/sqrt(rc^2-(x0-xc_end)^2)); -->
-%     -x1_end/sqrt(rt1^2-x1_end^2) . . .
-%     . . . = (x0_end-xc_end)/sqrt(rc^2-(x0_end-xc_end)^2); ......... (eq1)
+    % x1_end^2 - tand(90+ttu)^2 * rt1^2 + tand(90+ttu)^2 * x1_end^2 = 0
+    % x1_end^2 * (1 + tand(90+ttu)^2) = tand(90+ttu)^2 * rt1^2
+    x1_end = -rt1*tand(90+ttu)/sqrt(1+tand(90+ttu)^2);
+    
+    y1_end = rt + rt1 - sqrt(rt1^2 - x1_end^2);
 
-%     % solving for xc_end given y1 = y0 at x1_end = x0_end:
-%     y1 = y0 -->
-%     rt+rt1-sqrt(rt1^2-x1^2) = sqrt(rc^2-(x0-xc_end)^2); -->
-%     rt+rt1-sqrt(rt1^2-x1_end^2) = sqrt(rc^2-(x0_end-xc_end)^2); ... (eq2)
-    syms x1_end xc_end
-    eq1 = -x1_end/sqrt(rt1^2-x1_end^2) == (x1_end-xc_end)/sqrt(rc^2-(x1_end-xc_end)^2);
-    eq2 = rt+rt1-sqrt(rt1^2-x1_end^2) == sqrt(rc^2-(x1_end-xc_end)^2);
-    
-    ig_y = (rc+rt)/2;
-    ig_x1 = -sqrt(rt1^2-ig_y^2);
-    ig_xc = ig_x1 - sqrt(rc^2-ig_y^2);
-    sol = vpasolve([eq1,eq2],[x1_end,xc_end],[ig_x1;ig_xc]);
-    
-    x1_end = double(sol.x1_end);
-    xc_end = double(sol.xc_end);
+    dx0 = rt1*sind(ttu-90);
+    dy0 = rt1 - rt1*cosd(ttu-90);
+
+    dyLcc = rc - dy0 - y1_end;
+    dxLcc = dyLcc/tand(ttu-90);
+
+    x0_end = x1_end - dxLcc;
+    xc_end = x0_end - dx0;
 
     if x1_end > 0
         x1_end = -x1_end;
@@ -109,26 +152,33 @@ function Nozzle = CreateNozzle2D_G10(rc,Lc,rt1,rt,rt2,a,L,res,plt,xc_offset)
     x1 = flip(x)*x1_end;
     y1 = rt + rt1 - sqrt(rt1^2 - x1.^2);
 
-    x0 = x*(x1_end-xc_end) + xc_end;
-    y0 = sqrt(rc^2 - (x0-xc_end).^2);
+    x0 = x*dx0 + xc_end;
+    y0 = sqrt(rt1^2 - (x0-xc_end).^2) + (rc-rt1);
 
     xc = [xc_end-Lc, xc_end];
     yc = [rc, rc];
 
+    xcc = [x0(end), x1(1)];
+    ycc = [y0(end), y1(1)];
+
 
     % combine sections
 
-    x_all = [xc,x0(2:end),x1(2:end),x2(2:end-1),xL];
-    y_all = [yc,y0(2:end),y1(2:end),y2(2:end-1),yL];
+    x_all = [xc,x0(2:end-1),xcc,x1(2:end),x2(2:end-1),xL];
+    y_all = [yc,y0(2:end-1),ycc,y1(2:end),y2(2:end-1),yL];
 
     if xc_offset
         offset = xc(1);
         x_all = x_all - offset;
         xc = xc - offset;
         x0 = x0 - offset;
+        xcc = xcc - offset;
         x1 = x1 - offset;
         x2 = x2 - offset;
         xL = xL - offset;
+        if exit{1} == 'Contour'
+            NQE(:,1) = NQE(:,1) - offset;
+        end
     end
 
     Nozzle.x = x_all';
@@ -137,16 +187,27 @@ function Nozzle = CreateNozzle2D_G10(rc,Lc,rt1,rt,rt2,a,L,res,plt,xc_offset)
     Nozzle.Chamber.y = [-yc;yc]';
     Nozzle.Contraction.x = x0';
     Nozzle.Contraction.y = [-y0;y0]';
+    Nozzle.Contraction.xStraight = xcc';
+    Nozzle.Contraction.yStraight = [-ycc;ycc]';
     Nozzle.Throat.Upstream.x = x1';
     Nozzle.Throat.Upstream.y = [-y1;y1]';
     Nozzle.Throat.Downstream.x = x2';
     Nozzle.Throat.Downstream.y = [-y2;y2]';
     Nozzle.Expansion.x = xL';
     Nozzle.Expansion.y = [-yL;yL]';
+    if exit{1} == 'Contour'
+        Nozzle.Expansion.xNQE = [Nx;Q(1);Ex];
+        yNQE = [Ny;Q(2);Ey];
+        Nozzle.Expansion.yNQE = [-yNQE,yNQE];
+        plt{14} = 1;
+    else
+        plt{14} = 0;
+    end
 
     Nozzle.Characteristics.Lc = Lc;
     Nozzle.Characteristics.L = L;
     Nozzle.Characteristics.alpha = a;
+    Nozzle.Characteristics.ttu = ttu;
     Nozzle.Characteristics.rc = rc;
     Nozzle.Characteristics.rt1 = rt1;
     Nozzle.Characteristics.rt = rt;
@@ -164,6 +225,7 @@ end
 
 function PlotNozzle2D_G10(Nozzle,plt)
     
+    rc = Nozzle.Characteristics.rc;
     rt1 = Nozzle.Characteristics.rt1;
     rt = Nozzle.Characteristics.rt;
     rt2 = Nozzle.Characteristics.rt2;
@@ -174,13 +236,15 @@ function PlotNozzle2D_G10(Nozzle,plt)
     yc = Nozzle.Chamber.y(:,2);
     x0 = Nozzle.Contraction.x;
     y0 = Nozzle.Contraction.y(:,2);
+    xcc = Nozzle.Contraction.xStraight;
+    ycc = Nozzle.Contraction.yStraight(:,2);
     x1 = Nozzle.Throat.Upstream.x;
     y1 = Nozzle.Throat.Upstream.y(:,2);
     x2 = Nozzle.Throat.Downstream.x;
     y2 = Nozzle.Throat.Downstream.y(:,2);
     xL = Nozzle.Expansion.x;
     yL = Nozzle.Expansion.y(:,2);
-
+    
     plt_global = plt{1};
     plt_sect = plt{2};
     plt_mid = plt{3};
@@ -194,9 +258,15 @@ function PlotNozzle2D_G10(Nozzle,plt)
     plt_rTyp = plt{11};
     plt_rPnt = plt{12};
     plt_buffer = plt{13}; % percentage of 1 side's negative space vs image
+    plt_contour = plt{14};
+
+    if plt_contour
+        xNQE = Nozzle.Expansion.xNQE(:,1);
+        yNQE = Nozzle.Expansion.yNQE(:,2);
+    end
 
     if plt_global
-        f1 = figure(1);
+        figure();
         axis equal
         hold on
         grid on
@@ -207,6 +277,7 @@ function PlotNozzle2D_G10(Nozzle,plt)
         if plt_sect
             plot([xc(1),xc(1)],[-yc(1),yc(1)],plt_sTyp,LineWidth=plt_sPnt)
             plot([x0(1),x0(1)],[-y0(1),y0(1)],plt_sTyp,LineWidth=plt_sPnt)
+            plot([xcc(1),xcc(1)],[-ycc(1),ycc(1)],plt_sTyp,LineWidth=plt_sPnt)
             plot([x1(1),x1(1)],[-y1(1),y1(1)],plt_sTyp,LineWidth=plt_sPnt)
             plot([x2(1),x2(1)],[-y2(1),y2(1)],plt_sTyp,LineWidth=plt_sPnt)
             plot([xL(1),xL(1)],[-yL(1),yL(1)],plt_sTyp,LineWidth=plt_sPnt)
@@ -219,12 +290,15 @@ function PlotNozzle2D_G10(Nozzle,plt)
 
         if plt_radii
             for pm = [1,-1]
-                plot([x0(1),x0(1)],pm*[0,y0(1)],plt_rTyp,LineWidth=plt_rPnt)
-                plot([x0(1),x0(end)],pm*[0,y0(end)],plt_rTyp,LineWidth=plt_rPnt)
+                plot([x0(1),x0(1)],pm*[rc-rt1,y0(1)],plt_rTyp,LineWidth=plt_rPnt)
+                plot([x0(1),x0(end)],pm*[rc-rt1,y0(end)],plt_rTyp,LineWidth=plt_rPnt)
                 plot([x1(end),x1(1)],pm*[rt+rt1,y1(1)],plt_rTyp,LineWidth=plt_rPnt)
                 plot([x1(end),x1(end)],pm*[rt+rt1,y1(end)],plt_rTyp,LineWidth=plt_rPnt)
                 plot([x2(1),x2(1)],pm*[rt+rt2,y2(1)],plt_rTyp,LineWidth=plt_rPnt)
                 plot([x2(1),x2(end)],pm*[rt+rt2,y2(end)],plt_rTyp,LineWidth=plt_rPnt)
+                if plt_contour
+                    plot(xNQE,pm*yNQE,plt_rTyp,LineWidth=plt_rPnt)
+                end
             end
         end
 
